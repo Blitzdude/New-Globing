@@ -26,6 +26,8 @@
 // WinHelp is deprecated
 #define NOHELP
 
+// Turn on debug
+//#define _DEBUG
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 

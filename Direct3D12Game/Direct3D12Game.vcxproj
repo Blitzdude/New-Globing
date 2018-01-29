@@ -185,6 +185,7 @@
     <ResourceCompile Include="resource.rc" />
   </ItemGroup>
   <ItemGroup>
+    <Image Include="..\sunset.jpg" />
     <Image Include="directx.ico" />
   </ItemGroup>
   <ItemGroup>

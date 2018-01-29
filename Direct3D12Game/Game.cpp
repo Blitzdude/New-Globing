@@ -63,8 +63,8 @@ void Game::Update(DX::StepTimer const& timer)
     float elapsedTime = float(timer.GetElapsedSeconds());
 
     // TODO: Add your game logic here.
-	Matrix rotate = Matrix::CreateRotationX(elapsedTime);
-	rotate *= Matrix::CreateRotationY(elapsedTime * 2.f);
+	Matrix rotate = Matrix::CreateRotationY(elapsedTime);
+	//rotate *= Matrix::CreateRotationX(elapsedTime * 2.f);
 	//rotate *= Matrix::CreateRotationZ(elapsedTime);
 
 	m_world *= rotate;
@@ -84,8 +84,21 @@ void Game::Render() //RenderHere
 
     // TODO: Add your rendering code here.
 
+	m_spriteBatch->Begin(m_commandList.Get());
+
 	// renderText
-	drawText("Hello World, \nye basterds...");
+	// drawBackgroud
+	
+	m_spriteBatch->Draw(m_resourceDescriptors->GetGpuHandle(Descriptors::Background),
+		GetTextureSize(m_background.Get()),
+		m_fullscreenRect);
+
+	std::string toDraw = "" + (char)m_timer.GetFramesPerSecond();
+	drawText(toDraw.c_str());
+	
+	m_spriteBatch->End();
+
+
 
 	// rendergrid
 	m_effect->SetWorld(m_world);
@@ -94,19 +107,22 @@ void Game::Render() //RenderHere
 
 	m_batch->Begin(m_commandList.Get());
 
-	float change = sinf( m_timer.GetTotalSeconds());
-	
+	double originChange = sinf(m_timer.GetTotalSeconds()) + 1.0f;
 	Vector3 xvec(1.f, 0.f, 0.f);
 	Vector3 yvec(0.f, 0.f, 1.f);
 	Vector3 zvec(0.f, 1.f, 0.f);
 	Vector3 origin = Vector3::Zero;
 
 	size_t divisions = 10;
+
 	
-	origin += Vector3(0.f, change, 0.f);
-	drawGrid(xvec, yvec, origin, divisions);
-	drawGrid(xvec, yvec, origin + Vector3(0.f, 0.5f, 0.f), divisions);
-	drawGrid(xvec, yvec, origin + Vector3(0.f, 1.f, 0.f), divisions);
+
+	for (float i = 0.0f; i < 1.0f; i += 0.01f) {
+
+		drawGrid(xvec, yvec, origin + Vector3(0.f, i, 0.f) , divisions);
+	//drawGrid(xvec, yvec, origin + Vector3(0.f, 0.5f + i, 0.f), divisions);
+	//drawGrid(xvec, yvec, origin + Vector3(0.f, 1.f + i, 0.f), divisions);
+	}
 	
 	
 
@@ -126,11 +142,17 @@ void Game::Clear()
     DX::ThrowIfFailed(m_commandList->Reset(m_commandAllocators[m_backBufferIndex].Get(), nullptr));
 
     // Transition the render target into the correct state to allow for drawing into it.
-    D3D12_RESOURCE_BARRIER barrier = CD3DX12_RESOURCE_BARRIER::Transition(m_renderTargets[m_backBufferIndex].Get(), D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
+    D3D12_RESOURCE_BARRIER barrier = CD3DX12_RESOURCE_BARRIER::Transition(
+		m_offscreenRenderTarget.Get(),
+		D3D12_RESOURCE_STATE_RESOLVE_SOURCE, D3D12_RESOURCE_STATE_RENDER_TARGET);
+
+
     m_commandList->ResourceBarrier(1, &barrier);
 
     // Clear the views.
-    CD3DX12_CPU_DESCRIPTOR_HANDLE rtvDescriptor(m_rtvDescriptorHeap->GetCPUDescriptorHandleForHeapStart(), m_backBufferIndex, m_rtvDescriptorSize);
+    //CD3DX12_CPU_DESCRIPTOR_HANDLE rtvDescriptor(m_rtvDescriptorHeap->GetCPUDescriptorHandleForHeapStart(), m_backBufferIndex, m_rtvDescriptorSize);
+	CD3DX12_CPU_DESCRIPTOR_HANDLE rtvDescriptor(m_rtvDescriptorHeap->GetCPUDescriptorHandleForHeapStart(), c_swapBufferCount, m_rtvDescriptorSize);
+
     CD3DX12_CPU_DESCRIPTOR_HANDLE dsvDescriptor(m_dsvDescriptorHeap->GetCPUDescriptorHandleForHeapStart());
     m_commandList->OMSetRenderTargets(1, &rtvDescriptor, FALSE, &dsvDescriptor);
     m_commandList->ClearRenderTargetView(rtvDescriptor, Colors::CornflowerBlue, 0, nullptr);
@@ -146,9 +168,27 @@ void Game::Clear()
 // Submits the command list to the GPU and presents the back buffer contents to the screen.
 void Game::Present()
 {
+	
+
+	D3D12_RESOURCE_BARRIER barriers[2] =
+	{
+		CD3DX12_RESOURCE_BARRIER::Transition(m_offscreenRenderTarget.Get(),
+		D3D12_RESOURCE_STATE_RENDER_TARGET,
+		D3D12_RESOURCE_STATE_RESOLVE_SOURCE),
+		CD3DX12_RESOURCE_BARRIER::Transition(m_renderTargets[m_backBufferIndex].Get(),
+		D3D12_RESOURCE_STATE_PRESENT,
+		D3D12_RESOURCE_STATE_RESOLVE_DEST)
+	};
+	m_commandList->ResourceBarrier(2, barriers);
+
+	m_commandList->ResolveSubresource(m_renderTargets[m_backBufferIndex].Get(), 0,
+		m_offscreenRenderTarget.Get(), 0, DXGI_FORMAT_B8G8R8A8_UNORM);
+
+
     // Transition the render target to the state that allows it to be presented to the display.
     D3D12_RESOURCE_BARRIER barrier = CD3DX12_RESOURCE_BARRIER::Transition(m_renderTargets[m_backBufferIndex].Get(), D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
     m_commandList->ResourceBarrier(1, &barrier);
+	
 
     // Send the command list off to the GPU for processing.
     DX::ThrowIfFailed(m_commandList->Close());
@@ -282,7 +322,7 @@ void Game::CreateDevice()
 
     // Create descriptor heaps for render target views and depth stencil views.
     D3D12_DESCRIPTOR_HEAP_DESC rtvDescriptorHeapDesc = {};
-    rtvDescriptorHeapDesc.NumDescriptors = c_swapBufferCount;
+    rtvDescriptorHeapDesc.NumDescriptors = c_swapBufferCount + 1; // <---- Add one here!
     rtvDescriptorHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
 
     D3D12_DESCRIPTOR_HEAP_DESC dsvDescriptorHeapDesc = {};
@@ -316,6 +356,7 @@ void Game::CreateDevice()
 
     // TODO: Initialize device dependent objects here (independent of window size). // CreateDeviceHere
 
+
 	m_world = Matrix::Identity;
 
 	m_graphicsMemory = std::make_unique<GraphicsMemory>(m_d3dDevice.Get());
@@ -327,7 +368,15 @@ void Game::CreateDevice()
 
 	ResourceUploadBatch resourceUpload(m_d3dDevice.Get());
 
-	resourceUpload.Begin();
+	resourceUpload.Begin(); // ResourceUploadHere
+
+	
+	DX::ThrowIfFailed(
+		CreateWICTextureFromFile(m_d3dDevice.Get(), resourceUpload, L"sunset.jpg",
+			m_background.ReleaseAndGetAddressOf()));
+
+	CreateShaderResourceView(m_d3dDevice.Get(), m_background.Get(),
+		m_resourceDescriptors->GetCpuHandle(Descriptors::Background));
 
 	// Load .spritefont file and make it ready.
 	m_font = std::make_unique<SpriteFont>(m_d3dDevice.Get(), resourceUpload,
@@ -339,16 +388,22 @@ void Game::CreateDevice()
 	
 	// set render target state
 	RenderTargetState rtState(DXGI_FORMAT_B8G8R8A8_UNORM, DXGI_FORMAT_D32_FLOAT);
+	rtState.sampleDesc.Count = 4; // <---- 4x MSAA
 
+
+	CD3DX12_RASTERIZER_DESC rastDesc(D3D12_FILL_MODE_SOLID, D3D12_CULL_MODE_NONE, FALSE,
+		D3D12_DEFAULT_DEPTH_BIAS, D3D12_DEFAULT_DEPTH_BIAS_CLAMP,
+		D3D12_DEFAULT_SLOPE_SCALED_DEPTH_BIAS, TRUE, TRUE, FALSE,
+		0, D3D12_CONSERVATIVE_RASTERIZATION_MODE_OFF);
 
 	// effect pipeline state description
 	EffectPipelineStateDescription effect_pd(
-		&VertexPositionColor::InputLayout,
-		CommonStates::Opaque,
-		CommonStates::DepthDefault,
-		CommonStates::CullNone,
-		rtState,
-		D3D12_PRIMITIVE_TOPOLOGY_TYPE_LINE);
+		 &VertexPositionColor::InputLayout,
+		 CommonStates::Opaque,
+		 CommonStates::DepthDefault,
+		 rastDesc,
+		 rtState,
+		 D3D12_PRIMITIVE_TOPOLOGY_TYPE_LINE);
 
 	SpriteBatchPipelineStateDescription sprite_pd(rtState);
 
@@ -356,7 +411,7 @@ void Game::CreateDevice()
 
 	m_spriteBatch = std::make_unique<SpriteBatch>(m_d3dDevice.Get(), resourceUpload, sprite_pd);
 
-	auto uploadResourcesFinished = resourceUpload.End(m_commandQueue.Get());
+	auto uploadResourcesFinished = resourceUpload.End(m_commandQueue.Get()); // ResourceUploadEndHere
 
 	uploadResourcesFinished.wait();
 }
@@ -459,7 +514,8 @@ void Game::CreateResources()
         backBufferWidth,
         backBufferHeight,
         1, // This depth stencil view has only one texture.
-        1  // Use a single mipmap level.
+        1, // Use a single mipmap level.
+		4  // <---- Use 4x MSAA
         );
     depthStencilDesc.Flags |= D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL;
 
@@ -481,7 +537,7 @@ void Game::CreateResources()
 
     D3D12_DEPTH_STENCIL_VIEW_DESC dsvDesc = {};
     dsvDesc.Format = depthBufferFormat;
-    dsvDesc.ViewDimension = D3D12_DSV_DIMENSION_TEXTURE2D;
+    dsvDesc.ViewDimension = D3D12_DSV_DIMENSION_TEXTURE2DMS; // <---- use MSAA version
 
     m_d3dDevice->CreateDepthStencilView(m_depthStencil.Get(), &dsvDesc, m_dsvDescriptorHeap->GetCPUDescriptorHandleForHeapStart());
 
@@ -491,6 +547,41 @@ void Game::CreateResources()
 		static_cast<float>(backBufferWidth), static_cast<float>(backBufferHeight),
 		D3D12_MIN_DEPTH, D3D12_MAX_DEPTH };
 	
+	// msaa resource desription
+	D3D12_RESOURCE_DESC msaaRTDesc = CD3DX12_RESOURCE_DESC::Tex2D(
+		backBufferFormat,
+		backBufferWidth,
+		backBufferHeight,
+		1, // This render target view has only one texture.
+		1, // Use a single mipmap level
+		4  // <--- Use 4x MSAA 
+	);
+	msaaRTDesc.Flags |= D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET;
+
+	D3D12_CLEAR_VALUE msaaOptimizedClearValue = {};
+	msaaOptimizedClearValue.Format = backBufferFormat;
+	memcpy(msaaOptimizedClearValue.Color, Colors::CornflowerBlue, sizeof(float) * 4);
+
+	DX::ThrowIfFailed(m_d3dDevice->CreateCommittedResource(
+		&depthHeapProperties,
+		D3D12_HEAP_FLAG_NONE,
+		&msaaRTDesc,
+		D3D12_RESOURCE_STATE_RESOLVE_SOURCE,
+		&msaaOptimizedClearValue,
+		IID_PPV_ARGS(m_offscreenRenderTarget.ReleaseAndGetAddressOf())
+	));
+
+	CD3DX12_CPU_DESCRIPTOR_HANDLE rtvDescriptor(
+		m_rtvDescriptorHeap->GetCPUDescriptorHandleForHeapStart(),
+		c_swapBufferCount, m_rtvDescriptorSize);
+	m_d3dDevice->CreateRenderTargetView(m_offscreenRenderTarget.Get(), nullptr, rtvDescriptor);
+
+	// set fullscreen rectangle
+	m_fullscreenRect.left = 0;
+	m_fullscreenRect.top = 0;
+	m_fullscreenRect.right = backBufferWidth;
+	m_fullscreenRect.bottom = backBufferHeight;
+
 	m_spriteBatch->SetViewport(viewport);
 
 	// calculate matrices
@@ -598,10 +689,12 @@ void Game::OnDeviceLost()
     // TODO: Perform Direct3D resource cleanup.
 	m_graphicsMemory.reset();
 	m_font.reset();
+	m_offscreenRenderTarget.Reset();
 	m_resourceDescriptors.reset();
 	m_spriteBatch.reset();
 	m_effect.reset();
 	m_batch.reset();
+	m_background.Reset();
 
     for (UINT n = 0; n < c_swapBufferCount; n++)
     {
@@ -631,14 +724,14 @@ void Game::drawText(const char * asciiString)
 	ID3D12DescriptorHeap* heaps[] = { m_resourceDescriptors->Heap() };
 	m_commandList->SetDescriptorHeaps(_countof(heaps), heaps);
 
-	m_spriteBatch->Begin(m_commandList.Get());
+	//
 
 	Vector2 origin = m_font->MeasureString(output.c_str()) / 2.f;
 
 	m_font->DrawString(m_spriteBatch.get(), output.c_str(),
 		m_fontPos, Colors::White, 0.f, origin);
 
-	m_spriteBatch->End();
+	//m_spriteBatch->End();
 }
 
 void Game::drawGrid(DirectX::SimpleMath::Vector3 xaxis,
@@ -654,8 +747,8 @@ void Game::drawGrid(DirectX::SimpleMath::Vector3 xaxis,
 
 		Vector3 scale = xaxis * fPercent + origin;
 
-		VertexPositionColor v1(scale - yaxis, Colors::White);
-		VertexPositionColor v2(scale + yaxis, Colors::White);
+		VertexPositionColor v1(scale - yaxis, Colors::Red);
+		VertexPositionColor v2(scale + yaxis, Colors::Violet);
 		m_batch->DrawLine(v1, v2);
 	}
 
@@ -666,8 +759,8 @@ void Game::drawGrid(DirectX::SimpleMath::Vector3 xaxis,
 
 		Vector3 scale = yaxis * fPercent + origin;
 
-		VertexPositionColor v1(scale - xaxis, Colors::White);
-		VertexPositionColor v2(scale + xaxis, Colors::White);
+		VertexPositionColor v1(scale - xaxis, Colors::Green);
+		VertexPositionColor v2(scale + xaxis, Colors::Blue);
 		m_batch->DrawLine(v1, v2);
 	}
 

@@ -81,35 +81,42 @@ private:
     DX::StepTimer                                       m_timer;
 
 	// User variables *********************************//
-
+	//***********************************************///
 	// Graphics memory unique pointer
-	std::unique_ptr<DirectX::GraphicsMemory> m_graphicsMemory;
-	std::unique_ptr<DirectX::DescriptorHeap> m_resourceDescriptors;
+	std::unique_ptr<DirectX::GraphicsMemory>			m_graphicsMemory;
+	std::unique_ptr<DirectX::DescriptorHeap>			m_resourceDescriptors;
 	std::unique_ptr<DirectX::SpriteFont> m_font;
 
+	Microsoft::WRL::ComPtr<ID3D12Resource>				m_background;
+	Microsoft::WRL::ComPtr<ID3D12Resource>				m_offscreenRenderTarget;
+
 	// Font attributes
-	std::unique_ptr<DirectX::SpriteBatch> m_spriteBatch;
-	DirectX::SimpleMath::Vector2 m_fontPos;
+	std::unique_ptr<DirectX::SpriteBatch>				m_spriteBatch;
+	DirectX::SimpleMath::Vector2						m_origin;
+
+	DirectX::SimpleMath::Vector2						m_fontPos;
 
 	// Matrices
-	DirectX::SimpleMath::Matrix m_rotation;
-	DirectX::SimpleMath::Matrix m_world;
-	DirectX::SimpleMath::Matrix m_view;
-	DirectX::SimpleMath::Matrix m_proj;
+	DirectX::SimpleMath::Matrix							m_rotation;
+	DirectX::SimpleMath::Matrix							m_world;
+	DirectX::SimpleMath::Matrix							m_view;
+	DirectX::SimpleMath::Matrix							m_proj;
 
 	// effect rendering
 	std::unique_ptr<DirectX::BasicEffect> m_effect;
 	std::unique_ptr<DirectX::PrimitiveBatch<DirectX::VertexPositionColor>> m_batch;
 
+	// Rect descriptors
+	RECT m_fullscreenRect;
 	enum Descriptors
 	{
 		MyFont,
+		Background,
 		Count
 	};
 
 	// ************************************************//
-
-	// User Methds ********************************//
+	// User Methods ********************************//
 	void drawText(const char* asciiString);
 	void drawGrid(	DirectX::SimpleMath::Vector3 xaxis,
 					DirectX::SimpleMath::Vector3 yaxis,
