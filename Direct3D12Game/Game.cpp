@@ -63,11 +63,12 @@ void Game::Update(DX::StepTimer const& timer)
     float elapsedTime = float(timer.GetElapsedSeconds());
 
     // TODO: Add your game logic here.
-	Matrix rotate = Matrix::CreateRotationY(elapsedTime);
+	//Matrix rotate = Matrix::CreateRotationY(elapsedTime);
 	//rotate *= Matrix::CreateRotationX(elapsedTime * 2.f);
 	//rotate *= Matrix::CreateRotationZ(elapsedTime);
+	Vector3 shapePos = Vector3(0.0f, 0.0f, cos(elapsedTime));
 
-	m_world *= rotate;
+	m_world = m_world;
 }
 
 // Draws the scene.
@@ -101,30 +102,37 @@ void Game::Render() //RenderHere
 
 
 	// rendergrid
-	m_effect->SetWorld(m_world);
+	m_gridEffect->SetWorld(m_world);
 
-	m_effect->Apply(m_commandList.Get());
+	m_gridEffect->Apply(m_commandList.Get());
 
 	m_batch->Begin(m_commandList.Get());
 
-	double originChange = sinf(m_timer.GetTotalSeconds()) + 1.0f;
-	Vector3 xvec(1.f, 0.f, 0.f);
-	Vector3 yvec(0.f, 0.f, 1.f);
-	Vector3 zvec(0.f, 1.f, 0.f);
 	Vector3 origin = Vector3::Zero;
 
 	size_t divisions = 10;
 
-	
-	drawGrid(xvec, yvec, origin, XMFLOAT4(1.0f, 1.0f, 0.0f, 0.05f), divisions);
-	drawGrid(xvec, zvec, origin + Vector3(0.0f, 1.0f, 1.0f), XMFLOAT4(0.0f, 1.0f, 0.0f, 1.0f), divisions);
-	drawGrid(yvec, zvec, origin + Vector3(1.0f, 1.0f, 0.0f), XMFLOAT4(0.0f, 0.0f, 1.0f, 1.0f), divisions);
-	
-	
-	
 
+	drawGrid(Vector3::UnitX, Vector3::UnitY, origin + Vector3(0.f, 0.f, 1.f), XMFLOAT4(1.f, 0.f, 0.f, 0.01f), divisions);
+	drawGrid(Vector3::UnitX, Vector3::UnitZ, origin + Vector3(0.f, -1.f, 0.f), XMFLOAT4(0.f, 1.f, 0.f, 0.01f), divisions);
+	drawGrid(Vector3::UnitY, Vector3::UnitZ, origin + Vector3(-1.f, 0.f, 0.f), XMFLOAT4(0.f, 0.f, 1.f, 0.01f), divisions);
+	
 	m_batch->End();
 
+	// render sphere
+	float time = m_timer.GetTotalSeconds();
+	Vector3 shapePos = Vector3(cosf(time), sinf(time), 0.f);
+	m_rotation = Matrix::CreateRotationY(sinf(time));
+
+	if (time > 10)
+	{
+		printf("hey");
+	}
+
+	m_shapeEffect->SetMatrices(m_world * m_rotation * Matrix::CreateTranslation(shapePos), m_view, m_proj);
+	m_shapeEffect->Apply(m_commandList.Get());
+	m_shape->Draw(m_commandList.Get());
+	m_shape2->Draw(m_commandList.Get());
 
     // Show the new frame.
     Present();
@@ -353,9 +361,39 @@ void Game::CreateDevice()
 
     // TODO: Initialize device dependent objects here (independent of window size). // CreateDeviceHere
 
-	m_world = Matrix::Identity;
+
 
 	m_graphicsMemory = std::make_unique<GraphicsMemory>(m_d3dDevice.Get());
+
+	// set render target state
+	RenderTargetState rtState(DXGI_FORMAT_B8G8R8A8_UNORM, DXGI_FORMAT_D32_FLOAT);
+	rtState.sampleDesc.Count = 4; // <---- 4x MSAA
+
+	CD3DX12_RASTERIZER_DESC rastDesc(D3D12_FILL_MODE_SOLID, D3D12_CULL_MODE_NONE, FALSE,
+		D3D12_DEFAULT_DEPTH_BIAS, D3D12_DEFAULT_DEPTH_BIAS_CLAMP,
+		D3D12_DEFAULT_SLOPE_SCALED_DEPTH_BIAS, TRUE, TRUE, FALSE,
+		0, D3D12_CONSERVATIVE_RASTERIZATION_MODE_OFF);
+
+
+	// effect pipeline state description for grid
+	EffectPipelineStateDescription effect_pd(
+		&VertexPositionColor::InputLayout,
+		CommonStates::AlphaBlend,
+		CommonStates::DepthDefault,
+		rastDesc,
+		rtState,
+		D3D12_PRIMITIVE_TOPOLOGY_TYPE_LINE);
+
+	// effect pipeline state descriptr for geometry shape
+	EffectPipelineStateDescription shape_pd(
+		&GeometricPrimitive::VertexType::InputLayout,
+		CommonStates::Opaque,
+		CommonStates::DepthDefault,
+		CommonStates::CullNone,
+		rtState
+	);
+
+
 
 	m_resourceDescriptors = std::make_unique<DescriptorHeap>(m_d3dDevice.Get(),
 		D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV,
@@ -382,30 +420,22 @@ void Game::CreateDevice()
 
 	m_batch = std::make_unique<PrimitiveBatch<VertexPositionColor>>(m_d3dDevice.Get());
 	
-	// set render target state
-	RenderTargetState rtState(DXGI_FORMAT_B8G8R8A8_UNORM, DXGI_FORMAT_D32_FLOAT);
-	rtState.sampleDesc.Count = 4; // <---- 4x MSAA
-
-
-	CD3DX12_RASTERIZER_DESC rastDesc(D3D12_FILL_MODE_SOLID, D3D12_CULL_MODE_NONE, FALSE,
-		D3D12_DEFAULT_DEPTH_BIAS, D3D12_DEFAULT_DEPTH_BIAS_CLAMP,
-		D3D12_DEFAULT_SLOPE_SCALED_DEPTH_BIAS, TRUE, TRUE, FALSE,
-		0, D3D12_CONSERVATIVE_RASTERIZATION_MODE_OFF);
-
-	// effect pipeline state description
-	EffectPipelineStateDescription effect_pd(
-		 &VertexPositionColor::InputLayout,
-		 CommonStates::Opaque,
-		 CommonStates::DepthDefault,
-		 rastDesc,
-		 rtState,
-		 D3D12_PRIMITIVE_TOPOLOGY_TYPE_LINE);
 
 	SpriteBatchPipelineStateDescription sprite_pd(rtState);
 
-	m_effect = std::make_unique<BasicEffect>(m_d3dDevice.Get(), EffectFlags::VertexColor, effect_pd);
+	// basic effect initialization
+	m_gridEffect = std::make_unique<BasicEffect>(m_d3dDevice.Get(), EffectFlags::VertexColor, effect_pd);
+	m_shapeEffect = std::make_unique<BasicEffect>(m_d3dDevice.Get(), EffectFlags::Lighting, shape_pd);
+	m_shapeEffect->EnableDefaultLighting();
 
+	// spritebatch init for text
 	m_spriteBatch = std::make_unique<SpriteBatch>(m_d3dDevice.Get(), resourceUpload, sprite_pd);
+	// shape init
+	m_shape = GeometricPrimitive::CreateSphere();
+	m_shape2 = GeometricPrimitive::CreateTorus();
+	
+
+	m_world = Matrix::Identity;
 
 	auto uploadResourcesFinished = resourceUpload.End(m_commandQueue.Get()); // ResourceUploadEndHere
 
@@ -589,8 +619,8 @@ void Game::CreateResources()
 		float(backBufferWidth) / float(backBufferHeight), 0.1f, 10.f);
 	m_rotation = Matrix::CreateRotationX(0.f);
 	// set effect matrices
-	m_effect->SetView(m_view);
-	m_effect->SetProjection(m_proj);
+	m_gridEffect->SetView(m_view);
+	m_gridEffect->SetProjection(m_proj);
 
 	// set font position; // DELETE
 	//m_fontPos.x = backBufferWidth / 2.f;
@@ -682,13 +712,16 @@ void Game::GetAdapter(IDXGIAdapter1** ppAdapter)
 
 void Game::OnDeviceLost()
 {
-    // TODO: Perform Direct3D resource cleanup.
+    // TODO: Perform Direct3D resource cleanup. // ondevicelosthere
 	m_graphicsMemory.reset();
 	m_font.reset();
+	m_shape.reset();
+	m_shape2.reset();
+	m_shapeEffect.reset();
 	m_offscreenRenderTarget.Reset();
 	m_resourceDescriptors.reset();
 	m_spriteBatch.reset();
-	m_effect.reset();
+	m_gridEffect.reset();
 	m_batch.reset();
 	m_background.Reset();
 

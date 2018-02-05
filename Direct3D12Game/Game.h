@@ -102,9 +102,12 @@ private:
 	DirectX::SimpleMath::Matrix							m_view;
 	DirectX::SimpleMath::Matrix							m_proj;
 	std::unique_ptr<DirectX::GeometricPrimitive>		m_shape;
+	std::unique_ptr<DirectX::GeometricPrimitive>		m_shape2;
+
 
 	// effect rendering
-	std::unique_ptr<DirectX::BasicEffect> m_effect;
+	std::unique_ptr<DirectX::BasicEffect> m_gridEffect;
+	std::unique_ptr<DirectX::BasicEffect> m_shapeEffect;
 	std::unique_ptr<DirectX::PrimitiveBatch<DirectX::VertexPositionColor>> m_batch;
 
 	// Rect descriptors

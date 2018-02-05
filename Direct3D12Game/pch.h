@@ -73,6 +73,9 @@
 #include "VertexTypes.h"
 #include "WICTextureLoader.h"
 
+// User headers
+#include <GeometricPrimitive.h>
+
 // For ASCII Font rendering
 #include <locale>
 #include <codecvt>
