@@ -94,13 +94,14 @@ private:
 	std::unique_ptr<DirectX::SpriteBatch>				m_spriteBatch;
 	DirectX::SimpleMath::Vector2						m_origin;
 
-	DirectX::SimpleMath::Vector2						m_fontPos;
+	//DirectX::SimpleMath::Vector2						m_fontPos;
 
 	// Matrices
 	DirectX::SimpleMath::Matrix							m_rotation;
 	DirectX::SimpleMath::Matrix							m_world;
 	DirectX::SimpleMath::Matrix							m_view;
 	DirectX::SimpleMath::Matrix							m_proj;
+	std::unique_ptr<DirectX::GeometricPrimitive>		m_shape;
 
 	// effect rendering
 	std::unique_ptr<DirectX::BasicEffect> m_effect;
@@ -117,10 +118,11 @@ private:
 
 	// ************************************************//
 	// User Methods ********************************//
-	void drawText(const char* asciiString);
+	void drawText(const char* asciiString, const DirectX::SimpleMath::Vector2 &pos);
 	void drawGrid(	DirectX::SimpleMath::Vector3 xaxis,
 					DirectX::SimpleMath::Vector3 yaxis,
 					DirectX::SimpleMath::Vector3 origin,
+					DirectX::XMFLOAT4 color,
 					size_t divisions);
 	// *******************************************//
 };

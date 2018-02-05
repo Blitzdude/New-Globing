@@ -93,8 +93,8 @@ void Game::Render() //RenderHere
 		GetTextureSize(m_background.Get()),
 		m_fullscreenRect);
 
-	std::string toDraw = "" + (char)m_timer.GetFramesPerSecond();
-	drawText(toDraw.c_str());
+	Vector2 fontPosition(20.0f, 25.0f);
+	drawText(std::to_string(m_timer.GetFramesPerSecond()).c_str(), fontPosition);
 	
 	m_spriteBatch->End();
 
@@ -116,13 +116,10 @@ void Game::Render() //RenderHere
 	size_t divisions = 10;
 
 	
-
-	for (float i = 0.0f; i < 1.0f; i += 0.01f) {
-
-		drawGrid(xvec, yvec, origin + Vector3(0.f, i, 0.f) , divisions);
-	//drawGrid(xvec, yvec, origin + Vector3(0.f, 0.5f + i, 0.f), divisions);
-	//drawGrid(xvec, yvec, origin + Vector3(0.f, 1.f + i, 0.f), divisions);
-	}
+	drawGrid(xvec, yvec, origin, XMFLOAT4(1.0f, 1.0f, 0.0f, 0.05f), divisions);
+	drawGrid(xvec, zvec, origin + Vector3(0.0f, 1.0f, 1.0f), XMFLOAT4(0.0f, 1.0f, 0.0f, 1.0f), divisions);
+	drawGrid(yvec, zvec, origin + Vector3(1.0f, 1.0f, 0.0f), XMFLOAT4(0.0f, 0.0f, 1.0f, 1.0f), divisions);
+	
 	
 	
 
@@ -355,7 +352,6 @@ void Game::CreateDevice()
     }
 
     // TODO: Initialize device dependent objects here (independent of window size). // CreateDeviceHere
-
 
 	m_world = Matrix::Identity;
 
@@ -596,9 +592,9 @@ void Game::CreateResources()
 	m_effect->SetView(m_view);
 	m_effect->SetProjection(m_proj);
 
-	// set font position;
-	m_fontPos.x = backBufferWidth / 2.f;
-	m_fontPos.y = backBufferHeight / 2.f;
+	// set font position; // DELETE
+	//m_fontPos.x = backBufferWidth / 2.f;
+	//m_fontPos.y = backBufferHeight / 2.f;
 }
 
 void Game::WaitForGpu() noexcept
@@ -716,7 +712,7 @@ void Game::OnDeviceLost()
     CreateResources();
 }
 
-void Game::drawText(const char * asciiString)
+void Game::drawText(const char * asciiString, const Vector2 &pos)
 {
 	std::wstring_convert<std::codecvt_utf8<wchar_t>> converter;
 	std::wstring output = converter.from_bytes(asciiString);
@@ -724,19 +720,18 @@ void Game::drawText(const char * asciiString)
 	ID3D12DescriptorHeap* heaps[] = { m_resourceDescriptors->Heap() };
 	m_commandList->SetDescriptorHeaps(_countof(heaps), heaps);
 
-	//
-
 	Vector2 origin = m_font->MeasureString(output.c_str()) / 2.f;
+	Vector2 fontPos = pos;
 
 	m_font->DrawString(m_spriteBatch.get(), output.c_str(),
-		m_fontPos, Colors::White, 0.f, origin);
+		fontPos, Colors::White, 0.f, origin);
 
-	//m_spriteBatch->End();
 }
 
-void Game::drawGrid(DirectX::SimpleMath::Vector3 xaxis,
-					DirectX::SimpleMath::Vector3 yaxis,
-					DirectX::SimpleMath::Vector3 origin,
+void Game::drawGrid(Vector3 xaxis,
+					Vector3 yaxis,
+					Vector3 origin,
+					XMFLOAT4 color,
 					size_t divisions)
 {
 
@@ -747,8 +742,8 @@ void Game::drawGrid(DirectX::SimpleMath::Vector3 xaxis,
 
 		Vector3 scale = xaxis * fPercent + origin;
 
-		VertexPositionColor v1(scale - yaxis, Colors::Red);
-		VertexPositionColor v2(scale + yaxis, Colors::Violet);
+		VertexPositionColor v1(scale - yaxis, color);
+		VertexPositionColor v2(scale + yaxis, color);
 		m_batch->DrawLine(v1, v2);
 	}
 
@@ -759,8 +754,8 @@ void Game::drawGrid(DirectX::SimpleMath::Vector3 xaxis,
 
 		Vector3 scale = yaxis * fPercent + origin;
 
-		VertexPositionColor v1(scale - xaxis, Colors::Green);
-		VertexPositionColor v2(scale + xaxis, Colors::Blue);
+		VertexPositionColor v1(scale - xaxis, color);
+		VertexPositionColor v2(scale + xaxis, color);
 		m_batch->DrawLine(v1, v2);
 	}
 
