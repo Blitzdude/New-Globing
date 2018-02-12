@@ -101,8 +101,11 @@ private:
 	DirectX::SimpleMath::Matrix							m_world;
 	DirectX::SimpleMath::Matrix							m_view;
 	DirectX::SimpleMath::Matrix							m_proj;
-	std::unique_ptr<DirectX::GeometricPrimitive>		m_shape;
-	std::unique_ptr<DirectX::GeometricPrimitive>		m_shape2;
+
+	std::vector<std::unique_ptr<RenderItem>>			m_renderItems;
+
+	//std::unique_ptr<DirectX::GeometricPrimitive>		m_shape;
+	//std::unique_ptr<DirectX::GeometricPrimitive>		m_shape2;
 
 
 	// effect rendering
@@ -127,5 +130,8 @@ private:
 					DirectX::SimpleMath::Vector3 origin,
 					DirectX::XMFLOAT4 color,
 					size_t divisions);
+
+	void BuildRenderItems();
+
 	// *******************************************//
 };

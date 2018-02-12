@@ -122,17 +122,16 @@ void Game::Render() //RenderHere
 	// render sphere
 	float time = m_timer.GetTotalSeconds();
 	Vector3 shapePos = Vector3(cosf(time), sinf(time), 0.f);
-	m_rotation = Matrix::CreateRotationY(sinf(time));
+	m_rotation = Matrix::CreateRotationY(time * 2.0f);
 
-	if (time > 10)
-	{
-		printf("hey");
-	}
 
-	m_shapeEffect->SetMatrices(m_world * m_rotation * Matrix::CreateTranslation(shapePos), m_view, m_proj);
-	m_shapeEffect->Apply(m_commandList.Get());
-	m_shape->Draw(m_commandList.Get());
-	m_shape2->Draw(m_commandList.Get());
+	for (auto&& itr : m_shapes) {
+		m_shapeEffect->SetMatrices(m_world * m_rotation * Matrix::CreateTranslation(shapePos), m_view, m_proj);
+		m_shapeEffect->Apply(m_commandList.Get());
+		itr.getShape()->Draw(m_commandList.Get());
+	};
+	//m_shape->Draw(m_commandList.Get());
+	//m_shape2->Draw(m_commandList.Get());
 
     // Show the new frame.
     Present();
@@ -431,8 +430,12 @@ void Game::CreateDevice()
 	// spritebatch init for text
 	m_spriteBatch = std::make_unique<SpriteBatch>(m_d3dDevice.Get(), resourceUpload, sprite_pd);
 	// shape init
-	m_shape = GeometricPrimitive::CreateSphere();
-	m_shape2 = GeometricPrimitive::CreateTorus();
+	ShapeObject shape1;
+	ShapeObject shape2;
+	m_shapes.push_back(shape1);
+	m_shapes.push_back(shape2);
+
+	//m_shape2 = GeometricPrimitive::CreateTorus();
 	
 
 	m_world = Matrix::Identity;
@@ -715,8 +718,6 @@ void Game::OnDeviceLost()
     // TODO: Perform Direct3D resource cleanup. // ondevicelosthere
 	m_graphicsMemory.reset();
 	m_font.reset();
-	m_shape.reset();
-	m_shape2.reset();
 	m_shapeEffect.reset();
 	m_offscreenRenderTarget.Reset();
 	m_resourceDescriptors.reset();
@@ -724,6 +725,11 @@ void Game::OnDeviceLost()
 	m_gridEffect.reset();
 	m_batch.reset();
 	m_background.Reset();
+
+	// reset all shapes
+	for (auto&& itr : m_renderItems) {
+		itr->Geo.
+	}
 
     for (UINT n = 0; n < c_swapBufferCount; n++)
     {
@@ -793,4 +799,49 @@ void Game::drawGrid(Vector3 xaxis,
 	}
 
 	
+}
+
+void Game::BuildRenderItems()
+{
+	auto skullRitem = std::make_unique<RenderItem>();
+	skullRitem->World = Matrix::Identity;
+	
+	//skullRitem->ObjCBIndex = 0;
+	//skullRitem->Mat = mMaterials["tile0"].get();
+	skullRitem->Geo = std::make_unique<GeometricPrim>()
+	skullRitem->PrimitiveType = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
+	// Generate instance data.
+	const int n = 5;
+
+
+	float width = 200.0f;
+	float height = 200.0f;
+	float depth = 200.0f;
+
+	float x = -0.5f*width;
+	float y = -0.5f*height;
+	float z = -0.5f*depth;
+	float dx = width / (n - 1);
+	float dy = height / (n - 1);
+	float dz = depth / (n - 1);
+	for (int k = 0; k < n; ++k)
+	{
+		for (int i = 0; i < n; ++i)
+		{
+			for (int j = 0; j < n; ++j)
+			{
+				int index = k * n*n + i * n + j;
+				// Position instanced along a 3D grid.
+				skullRitem->World = XMFLOAT4X4(
+					1.0f, 0.0f, 0.0f, 0.0f,
+					0.0f, 1.0f, 0.0f, 0.0f,
+					0.0f, 0.0f, 1.0f, 0.0f,
+					x + j * dx, y + i * dy, z + k * dz, 1.0f);
+
+			}
+		}
+	}
+
+	m_renderItems.push_back(std::move(skullRitem));
+
 }

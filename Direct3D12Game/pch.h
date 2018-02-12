@@ -75,6 +75,7 @@
 
 // User headers
 #include <GeometricPrimitive.h>
+#include "RenderItem.h"
 
 // For ASCII Font rendering
 #include <locale>
