@@ -2,13 +2,9 @@
 
 #include "pch.h"
 
-using namespace DirectX;
-using namespace DirectX::SimpleMath;
-
-
-
 // Lightweight structure stores parameters to draw a shape.  This will
 // vary from app-to-app.
+
 struct RenderItem
 {
 	RenderItem() = default;
@@ -17,9 +13,10 @@ struct RenderItem
 	// World matrix of the shape that describes the object's local space
 	// relative to the world space, which defines the position, orientation,
 	// and scale of the object in the world.
-	XMFLOAT4X4 World = Matrix::Identity;
+	
+	DirectX::XMFLOAT4X4 World = DirectX::SimpleMath::Matrix::Identity;
 
-	XMFLOAT4X4 TexTransform = Matrix::Identity;
+	DirectX::XMFLOAT4X4 TexTransform = DirectX::SimpleMath::Matrix::Identity;
 
 	// Dirty flag indicating the object data has changed and we need to update the constant buffer.
 	// Because we have an object cbuffer for each FrameResource, we have to apply the
@@ -30,11 +27,12 @@ struct RenderItem
 	// Index into GPU constant buffer corresponding to the ObjectCB for this render item.
 	//UINT ObjCBIndex = -1;
 
-	GeometricPrimitive* Geo = GeometricPrimitive::CreateSphere();
+	std::unique_ptr<DirectX::GeometricPrimitive> Geo = DirectX::GeometricPrimitive::CreateSphere();
 
+	
 	// Primitive topology.
 	D3D12_PRIMITIVE_TOPOLOGY PrimitiveType = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
-
+	
 	//BoundingBox Bounds;
 	//std::vector<InstanceData> Instances;
 
@@ -44,3 +42,4 @@ struct RenderItem
 	//UINT StartIndexLocation = 0;
 	//int BaseVertexLocation = 0;
 };
+

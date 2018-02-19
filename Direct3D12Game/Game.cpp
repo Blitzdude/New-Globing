@@ -120,15 +120,15 @@ void Game::Render() //RenderHere
 	m_batch->End();
 
 	// render sphere
-	float time = m_timer.GetTotalSeconds();
+	float time = (float)m_timer.GetTotalSeconds();
 	Vector3 shapePos = Vector3(cosf(time), sinf(time), 0.f);
 	m_rotation = Matrix::CreateRotationY(time * 2.0f);
 
 
-	for (auto&& itr : m_shapes) {
+	for (auto&& itr : m_renderItems) {
 		m_shapeEffect->SetMatrices(m_world * m_rotation * Matrix::CreateTranslation(shapePos), m_view, m_proj);
 		m_shapeEffect->Apply(m_commandList.Get());
-		itr.getShape()->Draw(m_commandList.Get());
+		itr->Geo->Draw(m_commandList.Get());
 	};
 	//m_shape->Draw(m_commandList.Get());
 	//m_shape2->Draw(m_commandList.Get());
@@ -430,10 +430,10 @@ void Game::CreateDevice()
 	// spritebatch init for text
 	m_spriteBatch = std::make_unique<SpriteBatch>(m_d3dDevice.Get(), resourceUpload, sprite_pd);
 	// shape init
-	ShapeObject shape1;
-	ShapeObject shape2;
-	m_shapes.push_back(shape1);
-	m_shapes.push_back(shape2);
+	//ShapeObject shape1;
+	//ShapeObject shape2;
+	//m_shapes.push_back(shape1);
+	//m_shapes.push_back(shape2);
 
 	//m_shape2 = GeometricPrimitive::CreateTorus();
 	
@@ -728,7 +728,7 @@ void Game::OnDeviceLost()
 
 	// reset all shapes
 	for (auto&& itr : m_renderItems) {
-		itr->Geo.
+		itr->Geo.reset();
 	}
 
     for (UINT n = 0; n < c_swapBufferCount; n++)
@@ -803,13 +803,13 @@ void Game::drawGrid(Vector3 xaxis,
 
 void Game::BuildRenderItems()
 {
-	auto skullRitem = std::make_unique<RenderItem>();
-	skullRitem->World = Matrix::Identity;
+	auto renderItem = std::make_unique<RenderItem>();
+	renderItem->World = Matrix::Identity;
 	
 	//skullRitem->ObjCBIndex = 0;
 	//skullRitem->Mat = mMaterials["tile0"].get();
-	skullRitem->Geo = std::make_unique<GeometricPrim>()
-	skullRitem->PrimitiveType = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
+	renderItem->Geo = std::make_unique<GeometricPrimitive>();
+	renderItem->PrimitiveType = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
 	// Generate instance data.
 	const int n = 5;
 
@@ -832,7 +832,7 @@ void Game::BuildRenderItems()
 			{
 				int index = k * n*n + i * n + j;
 				// Position instanced along a 3D grid.
-				skullRitem->World = XMFLOAT4X4(
+				renderItem->World = XMFLOAT4X4(
 					1.0f, 0.0f, 0.0f, 0.0f,
 					0.0f, 1.0f, 0.0f, 0.0f,
 					0.0f, 0.0f, 1.0f, 0.0f,
@@ -842,6 +842,6 @@ void Game::BuildRenderItems()
 		}
 	}
 
-	m_renderItems.push_back(std::move(skullRitem));
+	m_renderItems.push_back(std::move(renderItem));
 
 }
