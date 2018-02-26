@@ -88,6 +88,8 @@ private:
 
 	Microsoft::WRL::ComPtr<ID3D12Resource>				m_background;
 	Microsoft::WRL::ComPtr<ID3D12Resource>				m_offscreenRenderTarget;
+	Microsoft::WRL::ComPtr<ID3D12Resource>				m_texture;
+	std::unique_ptr<DirectX::CommonStates>				m_states;
 
 	// Font attributes
 	std::unique_ptr<DirectX::SpriteBatch>				m_spriteBatch;
@@ -117,6 +119,7 @@ private:
 	enum Descriptors
 	{
 		MyFont,
+		Earth,
 		Background,
 		Count
 	};

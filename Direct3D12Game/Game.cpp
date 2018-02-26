@@ -84,7 +84,6 @@ void Game::Render() //RenderHere
     Clear();
 
     // TODO: Add your rendering code here.
-
 	m_spriteBatch->Begin(m_commandList.Get());
 
 	// renderText
@@ -120,6 +119,9 @@ void Game::Render() //RenderHere
 	m_batch->End();
 
 	// render sphere
+	ID3D12DescriptorHeap* heaps[] = { m_resourceDescriptors->Heap(), m_states->Heap() };
+	m_commandList->SetDescriptorHeaps(_countof(heaps), heaps);
+
 	float time = (float)m_timer.GetTotalSeconds();
 	Vector3 shapePos = Vector3(cosf(time), sinf(time), 0.f);
 	m_rotation = Matrix::CreateRotationY(time * 2.0f);
@@ -131,6 +133,9 @@ void Game::Render() //RenderHere
 		itr->Geo->Draw(m_commandList.Get());
 	};
 	*/
+	m_shapeEffect->SetMatrices(m_world, m_view, m_proj);
+
+	m_shapeEffect->Apply(m_commandList.Get());
 
 	m_shape->Draw(m_commandList.Get());
 	//m_shape2->Draw(m_commandList.Get());
@@ -399,6 +404,8 @@ void Game::CreateDevice()
 		D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE,
 		Descriptors::Count);
 
+	m_states = std::make_unique<CommonStates>(m_d3dDevice.Get());
+
 	ResourceUploadBatch resourceUpload(m_d3dDevice.Get());
 
 	resourceUpload.Begin(); // ResourceUploadHere
@@ -408,8 +415,15 @@ void Game::CreateDevice()
 		CreateWICTextureFromFile(m_d3dDevice.Get(), resourceUpload, L"sunset.jpg",
 			m_background.ReleaseAndGetAddressOf()));
 
+	DX::ThrowIfFailed(
+		CreateWICTextureFromFile(m_d3dDevice.Get(), resourceUpload, L"earth.bmp",
+			m_texture.ReleaseAndGetAddressOf(), false));
+
 	CreateShaderResourceView(m_d3dDevice.Get(), m_background.Get(),
 		m_resourceDescriptors->GetCpuHandle(Descriptors::Background));
+
+	CreateShaderResourceView(m_d3dDevice.Get(), m_texture.Get(),
+		m_resourceDescriptors->GetCpuHandle(Descriptors::Earth));
 
 	// Load .spritefont file and make it ready.
 	m_font = std::make_unique<SpriteFont>(m_d3dDevice.Get(), resourceUpload,
@@ -424,11 +438,16 @@ void Game::CreateDevice()
 
 	// basic effect initialization
 	m_gridEffect = std::make_unique<BasicEffect>(m_d3dDevice.Get(), EffectFlags::VertexColor, effect_pd);
-	m_shapeEffect = std::make_unique<BasicEffect>(m_d3dDevice.Get(), EffectFlags::Lighting, shape_pd);
-	m_shapeEffect->EnableDefaultLighting();
+	m_shapeEffect = std::make_unique<BasicEffect>(m_d3dDevice.Get(), EffectFlags::PerPixelLighting | EffectFlags::Texture, shape_pd);
+	m_shapeEffect->SetLightEnabled(0, true);
+	m_shapeEffect->SetLightDiffuseColor(0, Colors::White);
+	m_shapeEffect->SetLightDirection(0, -Vector3::UnitZ);
+	m_shapeEffect->SetTexture(m_resourceDescriptors->GetGpuHandle(Descriptors::Earth),
+		m_states->AnisotropicWrap());
 
 	// spritebatch init for text
 	m_spriteBatch = std::make_unique<SpriteBatch>(m_d3dDevice.Get(), resourceUpload, sprite_pd);
+
 	// shape init
 	//ShapeObject shape1;
 	//ShapeObject shape2;
@@ -726,6 +745,8 @@ void Game::OnDeviceLost()
 	m_gridEffect.reset();
 	m_batch.reset();
 	m_background.Reset();
+	m_texture.Reset();
+	m_states.reset();
 
 	// reset all shapes
 	/*
