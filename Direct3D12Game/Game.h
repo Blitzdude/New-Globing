@@ -6,7 +6,6 @@
 
 #include "StepTimer.h"
 
-
 // A basic game implementation that creates a D3D12 device and
 // provides a game loop.
 class Game
@@ -102,9 +101,9 @@ private:
 	DirectX::SimpleMath::Matrix							m_view;
 	DirectX::SimpleMath::Matrix							m_proj;
 
-	std::vector<std::unique_ptr<RenderItem>>			m_renderItems;
+//	std::vector<std::unique_ptr<RenderItem>>			m_renderItems;
 
-	//std::unique_ptr<DirectX::GeometricPrimitive>		m_shape;
+	std::unique_ptr<DirectX::GeometricPrimitive>		m_shape;
 	//std::unique_ptr<DirectX::GeometricPrimitive>		m_shape2;
 
 

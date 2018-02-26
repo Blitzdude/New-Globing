@@ -124,13 +124,15 @@ void Game::Render() //RenderHere
 	Vector3 shapePos = Vector3(cosf(time), sinf(time), 0.f);
 	m_rotation = Matrix::CreateRotationY(time * 2.0f);
 
-
+	/*
 	for (auto&& itr : m_renderItems) {
 		m_shapeEffect->SetMatrices(m_world * m_rotation * Matrix::CreateTranslation(shapePos), m_view, m_proj);
 		m_shapeEffect->Apply(m_commandList.Get());
 		itr->Geo->Draw(m_commandList.Get());
 	};
-	//m_shape->Draw(m_commandList.Get());
+	*/
+
+	m_shape->Draw(m_commandList.Get());
 	//m_shape2->Draw(m_commandList.Get());
 
     // Show the new frame.
@@ -154,7 +156,6 @@ void Game::Clear()
     m_commandList->ResourceBarrier(1, &barrier);
 
     // Clear the views.
-    //CD3DX12_CPU_DESCRIPTOR_HANDLE rtvDescriptor(m_rtvDescriptorHeap->GetCPUDescriptorHandleForHeapStart(), m_backBufferIndex, m_rtvDescriptorSize);
 	CD3DX12_CPU_DESCRIPTOR_HANDLE rtvDescriptor(m_rtvDescriptorHeap->GetCPUDescriptorHandleForHeapStart(), c_swapBufferCount, m_rtvDescriptorSize);
 
     CD3DX12_CPU_DESCRIPTOR_HANDLE dsvDescriptor(m_dsvDescriptorHeap->GetCPUDescriptorHandleForHeapStart());
@@ -173,7 +174,6 @@ void Game::Clear()
 void Game::Present()
 {
 	
-
 	D3D12_RESOURCE_BARRIER barriers[2] =
 	{
 		CD3DX12_RESOURCE_BARRIER::Transition(m_offscreenRenderTarget.Get(),
@@ -435,6 +435,7 @@ void Game::CreateDevice()
 	//m_shapes.push_back(shape1);
 	//m_shapes.push_back(shape2);
 
+	m_shape = GeometricPrimitive::CreateSphere();
 	//m_shape2 = GeometricPrimitive::CreateTorus();
 	
 
@@ -727,9 +728,11 @@ void Game::OnDeviceLost()
 	m_background.Reset();
 
 	// reset all shapes
+	/*
 	for (auto&& itr : m_renderItems) {
 		itr->Geo.reset();
 	}
+	*/
 
     for (UINT n = 0; n < c_swapBufferCount; n++)
     {
@@ -803,6 +806,8 @@ void Game::drawGrid(Vector3 xaxis,
 
 void Game::BuildRenderItems()
 {
+	/*
+	
 	auto renderItem = std::make_unique<RenderItem>();
 	renderItem->World = Matrix::Identity;
 	
@@ -843,5 +848,5 @@ void Game::BuildRenderItems()
 	}
 
 	m_renderItems.push_back(std::move(renderItem));
-
+	*/
 }
