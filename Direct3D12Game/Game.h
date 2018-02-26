@@ -11,7 +11,6 @@
 class Game
 {
 public:
-
     Game();
     ~Game();
 
@@ -34,6 +33,12 @@ public:
 private:
 
     void Update(DX::StepTimer const& timer);
+	// input and movement
+	void OnKeyboardInput(DX::StepTimer const& timer);
+
+	std::unique_ptr<DirectX::Keyboard>	m_keyboard;
+	std::unique_ptr<DirectX::Mouse>		m_mouse;
+
     void Render();
 
     void Clear();
@@ -54,6 +59,7 @@ private:
     HWND                                                m_window;
     int                                                 m_outputWidth;
     int                                                 m_outputHeight;
+	POINT												m_lastMousePosition;
 
     // Direct3D Objects
     D3D_FEATURE_LEVEL                                   m_featureLevel;
@@ -93,15 +99,14 @@ private:
 	std::unique_ptr<DirectX::SpriteBatch>				m_spriteBatch;
 	DirectX::SimpleMath::Vector2						m_origin;
 
-	//DirectX::SimpleMath::Vector2						m_fontPos;
 
 	// Matrices
 	DirectX::SimpleMath::Matrix							m_rotation;
 	DirectX::SimpleMath::Matrix							m_world;
-	DirectX::SimpleMath::Matrix							m_view;
-	DirectX::SimpleMath::Matrix							m_proj;
 
-//	std::vector<std::unique_ptr<RenderItem>>			m_renderItems;
+
+	// Camera
+	Camera												m_camera;
 
 	std::unique_ptr<DirectX::GeometricPrimitive>		m_shape;
 	//std::unique_ptr<DirectX::GeometricPrimitive>		m_shape2;

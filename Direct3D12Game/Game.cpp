@@ -35,13 +35,17 @@ void Game::Initialize(HWND window, int width, int height)
     m_outputWidth = std::max(width, 1);
     m_outputHeight = std::max(height, 1);
 
+	m_keyboard = std::make_unique<DirectX::Keyboard>();
+	m_mouse = std::make_unique<Mouse>();
+	m_mouse->SetWindow(window);
+
     CreateDevice();
     CreateResources();
-
+	m_camera.SetPosition(0.0f, 2.0f, -5.0f);
     // TODO: Change the timer settings if you want something other than the default variable timestep mode.
     // e.g. for 60 FPS fixed timestep update logic, call:
     
-    m_timer.SetFixedTimeStep(true);
+	//m_timer.SetFixedTimeStep(true);
     m_timer.SetTargetElapsedSeconds(1.0 / 60);
     
 }
@@ -60,16 +64,59 @@ void Game::Tick()
 // Updates the world.
 void Game::Update(DX::StepTimer const& timer)
 {
+	OnKeyboardInput(timer);
     float elapsedTime = float(timer.GetElapsedSeconds());
 
     // TODO: Add your game logic here.
-	//Matrix rotate = Matrix::CreateRotationY(elapsedTime);
-	//rotate *= Matrix::CreateRotationX(elapsedTime * 2.f);
-	//rotate *= Matrix::CreateRotationZ(elapsedTime);
 	Vector3 shapePos = Vector3(0.0f, 0.0f, cos(elapsedTime));
 
 	m_world = m_world;
+
+	auto kb = m_keyboard->GetState();
+	if (kb.Escape)
+		PostQuitMessage(0);
+
+	auto mouse = m_mouse->GetState();
+
+
+	if (mouse.positionMode == Mouse::MODE_RELATIVE)
+	{
+		static const float ROTATION_GAIN = 0.004f;
+
+		Vector3 delta = Vector3(float(mouse.x), float(mouse.y), 0.f)
+			* ROTATION_GAIN;
+
+		m_camera.Pitch(delta.y);
+		m_camera.RotateY(delta.x);
+
+		
+	}
+
+	m_mouse->SetMode(mouse.leftButton ? Mouse::MODE_RELATIVE : Mouse::MODE_ABSOLUTE);
+
+
 }
+
+void Game::OnKeyboardInput(DX::StepTimer const & timer)
+{
+	
+	const float dt = 0.01f; //timer.GetElapsedTicks(); // TODO: Totally calculated
+
+	if (GetAsyncKeyState('W') & 0x8000)
+		m_camera.Walk(10.0f*dt);
+
+	if (GetAsyncKeyState('S') & 0x8000)
+		m_camera.Walk(-10.0f*dt);
+
+	if (GetAsyncKeyState('A') & 0x8000)
+		m_camera.Strafe(-10.0f*dt);
+
+	if (GetAsyncKeyState('D') & 0x8000)
+		m_camera.Strafe(10.0f*dt);
+
+	m_camera.UpdateViewMatrix();
+}
+
 
 // Draws the scene.
 void Game::Render() //RenderHere
@@ -103,12 +150,15 @@ void Game::Render() //RenderHere
 
 	// rendergrid
 	m_gridEffect->SetWorld(m_world);
+	m_gridEffect->SetView(m_camera.GetView());
+	m_gridEffect->SetProjection(m_camera.GetProj());
+	
 
 	m_gridEffect->Apply(m_commandList.Get());
 
 	m_batch->Begin(m_commandList.Get());
 
-	Vector3 origin = Vector3::Zero;
+	Vector3 origin = Vector3::One * sinf(m_timer.GetElapsedSeconds());
 
 	size_t divisions = 10;
 
@@ -123,7 +173,7 @@ void Game::Render() //RenderHere
 	float time = (float)m_timer.GetTotalSeconds();
 	Vector3 shapePos = Vector3(cosf(time), sinf(time), 0.f);
 	m_rotation = Matrix::CreateRotationY(time * 2.0f);
-
+	m_shapeEffect->SetMatrices(m_world * m_rotation * Matrix::CreateTranslation(shapePos), m_camera.GetView(), m_camera.GetProj());
 	/*
 	for (auto&& itr : m_renderItems) {
 		m_shapeEffect->SetMatrices(m_world * m_rotation * Matrix::CreateTranslation(shapePos), m_view, m_proj);
@@ -245,8 +295,9 @@ void Game::OnWindowSizeChanged(int width, int height)
     m_outputHeight = std::max(height, 1);
 
     CreateResources();
-
+	
     // TODO: Game window is being resized.
+	m_camera.SetLens(0.25f*DirectX::XM_PI, m_outputWidth / m_outputHeight, 1.0f, 1000.0f);
 }
 
 // Properties
@@ -614,17 +665,12 @@ void Game::CreateResources()
 
 	m_spriteBatch->SetViewport(viewport);
 
-	// calculate matrices
-	// view matrix
-	m_view = Matrix::CreateLookAt(Vector3(2.f, 2.f, 2.f),
-		Vector3::Zero, Vector3::UnitY);
-	// projection matrix
-	m_proj = Matrix::CreatePerspectiveFieldOfView(XM_PI / 4.f,
-		float(backBufferWidth) / float(backBufferHeight), 0.1f, 10.f);
+	m_camera.UpdateViewMatrix();
+
 	m_rotation = Matrix::CreateRotationX(0.f);
 	// set effect matrices
-	m_gridEffect->SetView(m_view);
-	m_gridEffect->SetProjection(m_proj);
+	m_gridEffect->SetView(m_camera.GetView());
+	m_gridEffect->SetProjection(m_camera.GetProj());
 
 	// set font position; // DELETE
 	//m_fontPos.x = backBufferWidth / 2.f;

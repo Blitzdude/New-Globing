@@ -37,6 +37,7 @@
 #include <d3d12.h>
 #include <dxgi1_4.h>
 #include <DirectXMath.h>
+#include <DirectXMathConvert.inl>
 #include <DirectXColors.h>
 
 #include "d3dx12.h"
@@ -72,6 +73,9 @@
 #include "SpriteFont.h"
 #include "VertexTypes.h"
 #include "WICTextureLoader.h"
+
+//Camera
+#include "Camera.h"
 
 // User headers
 #include <GeometricPrimitive.h>
