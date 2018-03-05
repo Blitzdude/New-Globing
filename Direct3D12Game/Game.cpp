@@ -41,7 +41,8 @@ void Game::Initialize(HWND window, int width, int height)
 
     CreateDevice();
     CreateResources();
-	m_camera.SetPosition(0.0f, 2.0f, -5.0f);
+	m_camera.SetPosition(0.0f, 1.0f, -5.0f);
+	m_camera.LookAt(m_camera.GetPosition3f(), XMFLOAT3(0.0f, 0.0f, 0.0f), XMFLOAT3(0.0f, 1.0f, 0.0f));
     // TODO: Change the timer settings if you want something other than the default variable timestep mode.
     // e.g. for 60 FPS fixed timestep update logic, call:
     
@@ -68,9 +69,12 @@ void Game::Update(DX::StepTimer const& timer)
     float elapsedTime = float(timer.GetElapsedSeconds());
 
     // TODO: Add your game logic here.
-	Vector3 shapePos = Vector3(0.0f, 0.0f, cos(elapsedTime));
+	Vector3 shapePos = Vector3(0.0f, 0.0f, cosf(elapsedTime));
 
 	m_world = m_world;
+
+	// update earth rotation
+	m_earthRotation = m_earthRotation.CreateRotationY(elapsedTime);
 
 	auto kb = m_keyboard->GetState();
 	if (kb.Escape)
@@ -140,8 +144,13 @@ void Game::Render() //RenderHere
 		GetTextureSize(m_background.Get()),
 		m_fullscreenRect);
 
-	Vector2 fontPosition(20.0f, 25.0f);
-	drawText(std::to_string(m_timer.GetFramesPerSecond()).c_str(), fontPosition);
+	Vector2 fpsPosition(5.0f, 5.0f);
+	Vector2 textPosition(5.0f, 25.0f);
+	Vector3 camPos = m_camera.GetPosition();
+	drawText(std::to_string(m_timer.GetFramesPerSecond()).c_str(), fpsPosition);
+	// prepare the camera position string
+	std::string camString = "camera(x,y,z): " + std::to_string((float)camPos.x) + ":" + std::to_string((float)camPos.y) + ":" + std::to_string((float)camPos.z);
+	drawText(camString.c_str(), textPosition);
 	
 	m_spriteBatch->End();
 
@@ -173,9 +182,10 @@ void Game::Render() //RenderHere
 	m_commandList->SetDescriptorHeaps(_countof(heaps), heaps);
 
 	float time = (float)m_timer.GetTotalSeconds();
-	Vector3 shapePos = Vector3(cosf(time), sinf(time), 0.f);
-	m_rotation = Matrix::CreateRotationY(time * 2.0f);
-	m_shapeEffect->SetMatrices(m_world * m_rotation * Matrix::CreateTranslation(shapePos), m_camera.GetView(), m_camera.GetProj());
+	Vector3 shapePos = Vector3(cosf(time) * 0.5f, 0.f, sinf(time) * 0.5f);
+	//m_shapeEffect->SetMatrices(m_world * m_earthRotation * Matrix::CreateTranslation(shapePos) , m_camera.GetView(), m_camera.GetProj());
+	m_shapeEffect->SetMatrices(Matrix::CreateRotationY(time / 2.0f) * Matrix::CreateTranslation(shapePos) * m_world, m_camera.GetView(), m_camera.GetProj());
+
 	/*
 	for (auto&& itr : m_renderItems) {
 		m_shapeEffect->SetMatrices(m_world * m_rotation * Matrix::CreateTranslation(shapePos), m_view, m_proj);
@@ -183,7 +193,7 @@ void Game::Render() //RenderHere
 		itr->Geo->Draw(m_commandList.Get());
 	};
 	*/
-	m_shapeEffect->SetMatrices(m_world, m_view, m_proj);
+	//m_shapeEffect->SetMatrices(m_world, m_camera.GetView(), m_camera.GetProj());
 
 	m_shapeEffect->Apply(m_commandList.Get());
 
@@ -463,7 +473,7 @@ void Game::CreateDevice()
 
 	
 	DX::ThrowIfFailed(
-		CreateWICTextureFromFile(m_d3dDevice.Get(), resourceUpload, L"sunset.jpg",
+		CreateWICTextureFromFile(m_d3dDevice.Get(), resourceUpload, L"galaxy.jpg",
 			m_background.ReleaseAndGetAddressOf()));
 
 	DX::ThrowIfFailed(
@@ -478,9 +488,9 @@ void Game::CreateDevice()
 
 	// Load .spritefont file and make it ready.
 	m_font = std::make_unique<SpriteFont>(m_d3dDevice.Get(), resourceUpload,
-		L"myfile.spritefont",
-		m_resourceDescriptors->GetCpuHandle(Descriptors::MyFont),
-		m_resourceDescriptors->GetGpuHandle(Descriptors::MyFont));
+		L"courier.spritefont",
+		m_resourceDescriptors->GetCpuHandle(Descriptors::Courier),
+		m_resourceDescriptors->GetGpuHandle(Descriptors::Courier));
 
 	m_batch = std::make_unique<PrimitiveBatch<VertexPositionColor>>(m_d3dDevice.Get());
 	
@@ -492,7 +502,7 @@ void Game::CreateDevice()
 	m_shapeEffect = std::make_unique<BasicEffect>(m_d3dDevice.Get(), EffectFlags::PerPixelLighting | EffectFlags::Texture, shape_pd);
 	m_shapeEffect->SetLightEnabled(0, true);
 	m_shapeEffect->SetLightDiffuseColor(0, Colors::White);
-	m_shapeEffect->SetLightDirection(0, -Vector3::UnitZ);
+	m_shapeEffect->SetLightDirection(0, Vector3(-1.0f, -0.50f, 1.0f));
 	m_shapeEffect->SetTexture(m_resourceDescriptors->GetGpuHandle(Descriptors::Earth),
 		m_states->AnisotropicWrap());
 
@@ -686,14 +696,12 @@ void Game::CreateResources()
 
 	m_camera.UpdateViewMatrix();
 
-	m_rotation = Matrix::CreateRotationX(0.f);
+	m_earthRotation = Matrix::CreateRotationX(0.f);
 	// set effect matrices
 	m_gridEffect->SetView(m_camera.GetView());
 	m_gridEffect->SetProjection(m_camera.GetProj());
 
-	// set font position; // DELETE
-	//m_fontPos.x = backBufferWidth / 2.f;
-	//m_fontPos.y = backBufferHeight / 2.f;
+	
 }
 
 void Game::WaitForGpu() noexcept
@@ -829,7 +837,8 @@ void Game::drawText(const char * asciiString, const Vector2 &pos)
 	ID3D12DescriptorHeap* heaps[] = { m_resourceDescriptors->Heap() };
 	m_commandList->SetDescriptorHeaps(_countof(heaps), heaps);
 
-	Vector2 origin = m_font->MeasureString(output.c_str()) / 2.f;
+	//Vector2 origin = m_font->MeasureString(output.c_str()) / 2.f; // sets text origin to center
+	Vector2 origin = { 0.0f, 0.0f }; // set text origin to upper left corner
 	Vector2 fontPos = pos;
 
 	m_font->DrawString(m_spriteBatch.get(), output.c_str(),

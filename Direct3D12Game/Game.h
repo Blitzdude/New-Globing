@@ -53,8 +53,6 @@ private:
 
     void OnDeviceLost();
 
-	
-
     // Application state
     HWND                                                m_window;
     int                                                 m_outputWidth;
@@ -90,7 +88,7 @@ private:
 	// Graphics memory unique pointer
 	std::unique_ptr<DirectX::GraphicsMemory>			m_graphicsMemory;
 	std::unique_ptr<DirectX::DescriptorHeap>			m_resourceDescriptors;
-	std::unique_ptr<DirectX::SpriteFont> m_font;
+	std::unique_ptr<DirectX::SpriteFont>				m_font;
 
 	Microsoft::WRL::ComPtr<ID3D12Resource>				m_background;
 	Microsoft::WRL::ComPtr<ID3D12Resource>				m_offscreenRenderTarget;
@@ -103,7 +101,7 @@ private:
 
 
 	// Matrices
-	DirectX::SimpleMath::Matrix							m_rotation;
+	DirectX::SimpleMath::Matrix							m_earthRotation;
 	DirectX::SimpleMath::Matrix							m_world;
 
 
@@ -123,7 +121,7 @@ private:
 	RECT m_fullscreenRect;
 	enum Descriptors
 	{
-		MyFont,
+		Courier,
 		Earth,
 		Background,
 		Count
