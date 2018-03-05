@@ -1,5 +1,9 @@
-
 # New-Globing DirectX 12 demo. 
+Created By
+- Joel Känsälä (Blitzdude)
+- Santeri Heimovirta
+
+
 ## Simple DirectX 12 demo with a rotating earth model.
 - movable camera (use wasd to move and left mouse button to rotate the camera)
 - simple lighting
