@@ -1,4 +1,4 @@
-# New-Globing DirectX 12 demo. 
+# DirectX 12 Course demo - New-Globing. 
 Created By
 - Joel Känsälä (Blitzdude): Camera, Background, Grid, Text and movement
 - Santeri Heimovirta: Texture and Shadow.
