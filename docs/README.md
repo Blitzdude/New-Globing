@@ -1,7 +1,7 @@
 # New-Globing DirectX 12 demo. 
 Created By
-- Joel Känsälä (Blitzdude)
-- Santeri Heimovirta
+- Joel Känsälä (Blitzdude): Camera, Background, Grid, Text and movement
+- Santeri Heimovirta: Texture and Shadow.
 
 
 ## Simple DirectX 12 demo with a rotating earth model.
